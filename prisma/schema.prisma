@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  telegramId    String    @unique
+  telegramUsername String? @map("telegram_username")
+  firstName     String    @map("first_name")
+  lastName      String?   @map("last_name")
+  avatarUrl     String?   @map("avatar_url")
+  phone         String
+  position      String
+  company       String
+  strongSkills  String    @map("strong_skills") @db.Text
+  email         String?   @unique
+  passwordHash  String?   @map("password_hash")
+  isAdmin       Boolean   @default(false) @map("is_admin")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  registrations Registration[]
+
+  @@map("users")
+}
+
+model Event {
+  id            String    @id @default(uuid())
+  slug          String    @unique
+  title         String
+  description   String    @db.Text
+  coverImageUrl String    @map("cover_image_url")
+  startDateTime DateTime  @map("start_date_time")
+  paymentInfo   String?   @map("payment_info") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  registrations Registration[]
+
+  @@map("events")
+}
+
+model Registration {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  eventId           String    @map("event_id")
+  expectations      String    @db.Text
+  isPaid            Boolean   @default(false) @map("is_paid")
+  paymentInfo       String?   @map("payment_info") @db.Text
+  paymentReceiptUrl String?   @map("payment_receipt_url")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@map("registrations")
+}
+
