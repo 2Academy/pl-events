@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { RegistrationModal } from './RegistrationModal'
 import { LoginPromptModal } from './LoginPromptModal'
-import { isProfileComplete } from '@/lib/profile'
 
 interface RegisterButtonProps {
   eventId: string
@@ -19,6 +18,25 @@ interface RegisterButtonProps {
 }
 
 const PENDING_KEY = 'pendingRegistration'
+
+/**
+ * Локальная проверка, что профиль заполнен.
+ * Никаких серверных импортов — всё работает на клиенте.
+ */
+function isProfileComplete(user: RegisterButtonProps['user']): boolean {
+  if (!user) return false
+
+  return Boolean(
+    user.phone &&
+      user.phone.trim() &&
+      user.position &&
+      user.position.trim() &&
+      user.company &&
+      user.company.trim() &&
+      user.strongSkills &&
+      user.strongSkills.trim()
+  )
+}
 
 export function RegisterButton({ eventId, eventSlug, user }: RegisterButtonProps) {
   const router = useRouter()
@@ -112,7 +130,8 @@ export function RegisterButton({ eventId, eventSlug, user }: RegisterButtonProps
     router.refresh()
   }
 
-  const organizerLink = process.env.NEXT_PUBLIC_EVENT_ORGANIZER_TELEGRAM || 'https://t.me/organizer'
+  const organizerLink =
+    process.env.NEXT_PUBLIC_EVENT_ORGANIZER_TELEGRAM || 'https://t.me/organizer'
 
   return (
     <>
@@ -144,7 +163,8 @@ export function RegisterButton({ eventId, eventSlug, user }: RegisterButtonProps
               <div className="flex-1">
                 <h3 className="text-lg font-semibold mb-2">Регистрация успешна</h3>
                 <p className="text-sm text-gray-700 mb-3">
-                  Вы успешно записаны на мероприятие. Чтобы подтвердить бронь, напишите организатору по поводу оплаты.
+                  Вы успешно записаны на мероприятие. Чтобы подтвердить бронь, напишите
+                  организатору по поводу оплаты.
                 </p>
                 <a
                   href={organizerLink}
@@ -169,5 +189,3 @@ export function RegisterButton({ eventId, eventSlug, user }: RegisterButtonProps
     </>
   )
 }
-
-
