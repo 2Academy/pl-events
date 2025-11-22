@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ParticipantsList } from '@/components/ParticipantsList'
 
+export const dynamic = 'force-dynamic'
+
 async function getEvent(slug: string) {
   const event = await prisma.event.findUnique({
     where: { slug },

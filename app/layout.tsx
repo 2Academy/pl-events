@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Navigation } from '@/components/Navigation'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Event Registration Service',
   description: 'Service for event registration with Telegram authentication',
