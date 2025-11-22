@@ -34,22 +34,33 @@ export async function decrypt(session: string): Promise<AppJWTPayload | null> {
 }
 
 export async function getSession(): Promise<AppJWTPayload | null> {
-  // cookies() — синхронная функция, await не нужен
-  const cookieStore = cookies()
-  const session = cookieStore.get('auth_token')?.value
-  if (!session) return null
-  return await decrypt(session)
+  try {
+    // cookies() может выбросить ошибку во время статической генерации
+    const cookieStore = cookies()
+    const session = cookieStore.get('auth_token')?.value
+    if (!session) return null
+    return await decrypt(session)
+  } catch {
+    // Во время build-time cookies() может быть недоступен
+    return null
+  }
 }
 
 export async function getCurrentUser() {
-  const session = await getSession()
-  if (!session) return null
+  try {
+    const session = await getSession()
+    if (!session) return null
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-  })
+    // Prisma может быть недоступен во время build-time на Vercel
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+    })
 
-  return user
+    return user
+  } catch {
+    // Gracefully handle build-time errors (no DB connection, etc.)
+    return null
+  }
 }
 
 export class UnauthorizedError extends Error {
