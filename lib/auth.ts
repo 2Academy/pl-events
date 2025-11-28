@@ -1,15 +1,29 @@
-import { SignJWT, jwtVerify, type JWTPayload as JoseJWTPayload } from 'jose'
+import {
+  SignJWT,
+  jwtVerify,
+  type JWTPayload as JoseJWTPayload,
+} from 'jose'
 import { cookies } from 'next/headers'
 import { prisma } from './prisma'
 
-const secretKey = process.env.JWT_SECRET || 'default-secret-key-change-in-production'
+const secretKey =
+  process.env.JWT_SECRET || 'default-secret-key-change-in-production'
 const key = new TextEncoder().encode(secretKey)
 
-// Наш payload токена, совместимый с типом JWTPayload из jose
+// payload токена: расширяем тип из jose и добавляем свои поля
 export interface JWTPayload extends JoseJWTPayload {
   userId: string
   telegramId: string
 }
+
+export class UnauthorizedError extends Error {
+  constructor() {
+    super('Unauthorized')
+    this.name = 'UnauthorizedError'
+  }
+}
+
+// --- JWT helpers ---
 
 export async function encrypt(payload: JWTPayload): Promise<string> {
   return await new SignJWT(payload)
@@ -26,32 +40,41 @@ export async function decrypt(session: string): Promise<JWTPayload | null> {
     })
     return payload as JWTPayload
   } catch (error) {
+    // токен битый / протухший — просто считаем, что сессии нет
+    console.error('decrypt failed', error)
     return null
   }
 }
 
+// --- Session helpers ---
+
 export async function getSession(): Promise<JWTPayload | null> {
-  const cookieStore = await cookies()
-  const session = cookieStore.get('auth_token')?.value
-  if (!session) return null
-  return await decrypt(session)
+  try {
+    const cookieStore = await cookies()
+    const session = cookieStore.get('auth_token')?.value
+    if (!session) return null
+    return await decrypt(session)
+  } catch (error) {
+    // очень важно: НИКОГДА не роняем билд из-за cookies()
+    console.error('getSession failed', error)
+    return null
+  }
 }
 
 export async function getCurrentUser() {
-  const session = await getSession()
-  if (!session) return null
+  try {
+    const session = await getSession()
+    if (!session) return null
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-  })
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+    })
 
-  return user
-}
-
-export class UnauthorizedError extends Error {
-  constructor() {
-    super('Unauthorized')
-    this.name = 'UnauthorizedError'
+    return user
+  } catch (error) {
+    // и тут тоже: ошибки Prisma не должны завалить /_not-found
+    console.error('getCurrentUser failed', error)
+    return null
   }
 }
 
